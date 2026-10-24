@@ -10,7 +10,7 @@ from sqlalchemy.pool import StaticPool
 from rgb_website.config import Settings, get_settings
 from rgb_website.database.base import Base
 from rgb_website.database.session import get_db
-from rgb_website.export import _safe_text
+from rgb_website.export import _safe_text, iter_csv_rows
 from rgb_website.main import create_app
 
 
@@ -122,6 +122,7 @@ def test_export_requires_token_and_protects_formula_text(
     assert exported.status_code == 200
     assert exported.headers["cache-control"] == "no-store"
     assert "response_timestamp" in exported.text.splitlines()[0]
+    assert "gender" in exported.text.splitlines()[0]
     assert _safe_text("=formula") == "'=formula"
 
 
@@ -133,6 +134,34 @@ def test_export_is_closed_when_token_is_not_configured(
     get_settings.cache_clear()
 
     assert phase4_client.get("/api/admin/export").status_code == 503
+
+
+def test_legacy_trust_and_optional_gender_are_exported_unchanged(
+    db_session,
+) -> None:
+    from rgb_website.services import SurveyService
+
+    service = SurveyService(db_session)
+    service.create_session(
+        "legacy-export",
+        experiment_version="random-rgb-1.0",
+        gender=None,
+    )
+    session = service.get_session("legacy-export")
+    assert session is not None
+    color = service.get_next_color(session)
+    assert color is not None
+    service.add_response(
+        session_id="legacy-export",
+        color_id=color.color_id,
+        trial_number=1,
+        emotion="Vertrauen",
+        experiment_version="random-rgb-1.0",
+    )
+
+    rows = list(iter_csv_rows(db_session))
+    assert "gender" in rows[0]
+    assert "Vertrauen" in rows[1]
 
 
 def test_named_constraints_are_present() -> None:
@@ -149,5 +178,6 @@ def test_named_constraints_are_present() -> None:
         "ck_colors_position",
         "ck_sessions_trial_count",
         "ck_sessions_status",
+        "ck_sessions_gender",
     } <= names
     Base.metadata.drop_all(engine)

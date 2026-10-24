@@ -1,11 +1,11 @@
 const EMOTIONS = [
-  "Freude",
-  "Trauer",
   "Wut",
   "Angst",
-  "Ekel",
+  "Freude",
+  "Trauer",
   "Überraschung",
-  "Vertrauen",
+  "Verachtung",
+  "Ekel",
 ];
 
 const state = {
@@ -20,6 +20,7 @@ const introView = document.querySelector("#intro-view");
 const studyView = document.querySelector("#study-view");
 const completeView = document.querySelector("#complete-view");
 const startButton = document.querySelector("#start-button");
+const genderOptions = document.querySelector("#gender-options");
 const introError = document.querySelector("#intro-error");
 const globalError = document.querySelector("#global-error");
 const studyMessage = document.querySelector("#study-message");
@@ -152,7 +153,15 @@ async function startStudy() {
   startButton.disabled = true;
   setMessage(introError, "");
   try {
-    const payload = await request("/api/experiments", { method: "POST" });
+    const selectedGender = document.querySelector(
+      'input[name="gender"]:checked',
+    );
+    const payload = await request("/api/experiments", {
+      method: "POST",
+      body: JSON.stringify({
+        gender: selectedGender ? selectedGender.value : "not_specified",
+      }),
+    });
     renderState(payload);
   } catch (error) {
     setMessage(introError, error.message, true);

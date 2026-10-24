@@ -9,10 +9,15 @@ Datenerhebung freigegeben.
 ## Datenminimierung
 
 Gespeichert werden nur zufällige Sitzungskennung, Versuchsversion,
-Versuchslänge, Durchgang, angezeigte RGB-Werte, Emotion, Reihenfolge und
-optionaler serverseitiger Antwortzeitpunkt sowie der Sitzungsstatus. Namen, E-Mail-Adressen,
+Versuchslänge, Durchgang, angezeigte RGB-Werte, Emotion, Reihenfolge,
+optionale freiwillige Selbstauskunft zum Geschlecht und optionaler
+serverseitiger Antwortzeitpunkt sowie der Sitzungsstatus. Namen, E-Mail-Adressen,
 Matrikelnummern, Teilnehmerkonten und IP-Adressen gehören nicht zur
 Forschungsdatenbank.
+
+Die Geschlechtsfrage ist freiwillig: `male`, `female`, `diverse` oder
+`not_specified` (keine Auswahl). Die Angabe beschreibt die Selbstauskunft und
+erlaubt keinen automatischen Schluss auf das biologische Geschlecht.
 
 Die RGB-Erzeugung ist kanalweise gleichverteilt über `0..255`; das ist keine
 gleichmäßige Verteilung wahrgenommener Farben. Zufällige RGB-Wiederholungen

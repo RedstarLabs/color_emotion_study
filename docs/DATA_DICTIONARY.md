@@ -14,6 +14,7 @@ Erhebung wissenschaftlich freigegeben.
 | `survey_sessions.experiment_version` | Zeichenkette | Version der Versuchsdefinition. |
 | `survey_sessions.palette_version` | Zeichenkette | `random-rgb-1.0`. |
 | `survey_sessions.trial_count` | Ganzzahl | Unveränderlicher Snapshot: ausschließlich 10 oder 15. |
+| `survey_sessions.gender` | Zeichenkette/null | Freiwillige Selbstauskunft: `male`, `female`, `diverse` oder `not_specified`; bei historischen Sitzungen ohne Angabe bleibt der Wert null. |
 | `session_colors.color_id` | Zeichenkette | Positionsbezogene ID wie `trial-1`, keine Farbbezeichnung. |
 | `session_colors.position` | Ganzzahl | Position 1 bis 15 innerhalb der Sitzung. |
 | `session_colors.color_r/g/b` | Ganzzahlen | Tatsächlich erzeugte Werte, jeweils 0 bis 255. |
@@ -30,7 +31,7 @@ und dauerhaft gespeichert. RGB-Wiederholungen sind zulässig.
 | `color_id` | Zeichenkette | Referenz auf eine Farbe dieser Sitzung. |
 | `trial_number` | Ganzzahl | Position des Durchgangs, 1 bis 15. |
 | `color_r/g/b` | Ganzzahlen | Snapshot der angezeigten RGB-Werte, 0 bis 255. |
-| `emotion` | Zeichenkette | Eine der sieben zentralen Emotionskategorien. |
+| `emotion` | Zeichenkette | Für `random-rgb-2.0`: Wut, Angst, Freude, Trauer, Überraschung, Verachtung oder Ekel. Ältere Versionen können zusätzlich `Vertrauen` enthalten. |
 | `color_order` | Ganzzahl | Position der Farbe, 1 bis 15. |
 | `experiment_version` | Zeichenkette | Version der Versuchsdefinition. |
 | `response_timestamp` | Zeitstempel/null | Serverzeit; bei historischen Datensätzen eventuell nicht vorhanden. |
@@ -44,18 +45,24 @@ Versuch. Fehlende Antworten werden weder ergänzt noch als abgeschlossen
 gezählt. Sitzungen, die lediglich durch einen Browser-Reload verlassen wurden,
 bleiben zunächst `in_progress`, bis eine explizite Abbruchaktion erfolgt.
 
-## Emotionskategorien
+## Emotionskategorien und Versuchsversionen
 
-Freude, Trauer, Wut, Angst, Ekel, Überraschung und Vertrauen sind die
-zentralen, vorläufigen Werte. Eine Änderung muss versioniert und vor einer
-Erhebung freigegeben werden.
+Neue Sitzungen verwenden `random-rgb-2.0` und exakt diese sieben Werte:
+Wut, Angst, Freude, Trauer, Überraschung, Verachtung und Ekel. `Vertrauen`
+wird für neue Sitzungen abgelehnt. Historische Antworten werden nicht
+umgedeutet: Sitzungen mit `random-rgb-1.0` dürfen `Vertrauen` unverändert
+enthalten und bleiben über ihre Versuchsversion unterscheidbar.
+
+`gender` ist eine freiwillige Selbstauskunft. `not_specified` bedeutet, dass
+keine Auswahl gemacht wurde; daraus wird nicht automatisch auf das biologische
+Geschlecht geschlossen.
 
 ## CSV-Export
 
 Der Export enthält genau diese Spalten in dieser Reihenfolge:
 
 ```text
-session_id,session_status,experiment_version,trial_count,trial_number,color_id,color_r,color_g,color_b,emotion,response_timestamp
+session_id,session_status,experiment_version,gender,trial_count,trial_number,color_id,color_r,color_g,color_b,emotion,response_timestamp
 ```
 
 Er ist UTF-8-kodiert und verwendet CRLF-Zeilenenden. Es gibt eine Zeile pro

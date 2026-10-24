@@ -29,10 +29,12 @@ def test_start_page_and_static_assets_are_available() -> None:
     )
     assert "localStorage" not in script.text
     assert "sessionStorage" not in script.text
-    assert script.text.count('"Freude"') == 1
-    assert script.text.count('"Trauer"') == 1
     assert script.text.count('"Wut"') == 1
     assert script.text.count('"Angst"') == 1
-    assert script.text.count('"Ekel"') == 1
+    assert script.text.count('"Freude"') == 1
+    assert script.text.count('"Trauer"') == 1
     assert script.text.count('"Überraschung"') == 1
-    assert script.text.count('"Vertrauen"') == 1
+    assert script.text.count('"Verachtung"') == 1
+    assert script.text.count('"Ekel"') == 1
+    assert '"Vertrauen"' not in script.text
+    assert 'name="gender"' in page.text

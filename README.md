@@ -6,7 +6,9 @@ Eine datenschutzbewusste Web-App zur Untersuchung der Zuordnung von Farben und E
 
 ColorEmotionStudy ist eine eigenständige Forschungsanwendung, mit der untersucht wird, welche Emotionen Menschen mit unterschiedlichen Farben verbinden.
 
-Teilnehmende öffnen die Website über einen Link und beurteilen standardmäßig zehn, konfigurierbar fünfzehn, nacheinander angezeigte Farben. Jede Farbe wird durch unabhängig und gleichverteilt erzeugte RGB-Werte definiert. Die Teilnehmenden wählen für jede Farbe genau eine Emotion aus sieben vorgegebenen Optionen.
+Teilnehmende öffnen die Website über einen Link und beurteilen standardmäßig zehn, konfigurierbar fünfzehn, nacheinander angezeigte Farben. Jede Farbe wird durch unabhängig und gleichverteilt erzeugte RGB-Werte definiert. Die Teilnehmenden können vorab freiwillig eine Geschlechtsangabe machen und
+wählen für jede Farbe genau eine von sieben vorgegebenen Emotionen aus:
+Wut, Angst, Freude, Trauer, Überraschung, Verachtung oder Ekel.
 
 Die Antworten werden unmittelbar gespeichert und können anschließend als CSV-Datei für statistische Analysen und Machine-Learning-Experimente exportiert werden.
 
@@ -32,19 +34,26 @@ Das Projekt ist für die eigenständige Forschung konzipiert und nicht von der I
 - Dokumentierte Datenschutz- und Sicherheitsmaßnahmen
 - Automatisierte Tests und nachvollziehbare Releases
 
-## Emotionskategorien
+## Emotionskategorien und Versuchsversionen
 
-Die Emotionskategorien werden zentral konfiguriert. Als vorläufige Standardkonfiguration dienen:
+Neue Sitzungen verwenden `random-rgb-2.0` mit:
 
-1. Freude
-2. Trauer
-3. Wut
-4. Angst
-5. Ekel
-6. Überraschung
-7. Vertrauen
+1. Wut
+2. Angst
+3. Freude
+4. Trauer
+5. Überraschung
+6. Verachtung
+7. Ekel
 
-Die Kategorien müssen vor Beginn einer realen Erhebung festgelegt und versioniert werden. Eine Änderung während der Datenerhebung darf die Vergleichbarkeit bereits erhobener Daten nicht unbemerkt beeinträchtigen.
+`Vertrauen` wird in neuen Sitzungen nicht mehr angeboten oder akzeptiert.
+Historische Sitzungen der Version `random-rgb-1.0` behalten Antworten mit
+`Vertrauen` unverändert.
+
+Die Geschlechtsangabe ist eine freiwillige Selbstauskunft mit den internen
+Werten `male`, `female`, `diverse` und `not_specified`. Ohne Auswahl wird
+`not_specified` gespeichert; daraus wird nicht automatisch auf das biologische
+Geschlecht geschlossen.
 
 ## Technischer Stack
 

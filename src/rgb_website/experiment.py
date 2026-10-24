@@ -10,12 +10,21 @@ class Emotion(StrEnum):
     FEAR = "Angst"
     DISGUST = "Ekel"
     SURPRISE = "Überraschung"
-    TRUST = "Vertrauen"
+    CONTEMPT = "Verachtung"
 
 
-PALETTE_VERSION = "random-rgb-1.0"
+PALETTE_VERSION = "random-rgb-2.0"
+LEGACY_PALETTE_VERSION = "random-rgb-1.0"
+LEGACY_EMOTIONS = frozenset((*[emotion.value for emotion in Emotion], "Vertrauen"))
+CURRENT_EMOTIONS = frozenset(emotion.value for emotion in Emotion)
 TRIAL_COUNT = 10
 ALLOWED_TRIAL_COUNTS = (10, 15)
+
+
+def allowed_emotions_for_version(version: str) -> frozenset[str]:
+    if version == LEGACY_PALETTE_VERSION:
+        return LEGACY_EMOTIONS
+    return CURRENT_EMOTIONS
 
 
 @dataclass(frozen=True, slots=True)

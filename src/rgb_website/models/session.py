@@ -21,6 +21,11 @@ class SurveySession(Base):
             "status IN ('in_progress', 'completed', 'abandoned')",
             name="ck_sessions_status",
         ),
+        CheckConstraint(
+            "gender IS NULL OR gender IN "
+            "('male', 'female', 'diverse', 'not_specified')",
+            name="ck_sessions_gender",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(128), primary_key=True)
@@ -50,6 +55,18 @@ class SurveySession(Base):
         Integer,
         default=10,
         nullable=False,
+    )
+    gender: Mapped[str | None] = mapped_column(
+        Enum(
+            "male",
+            "female",
+            "diverse",
+            "not_specified",
+            name="gender_value",
+            native_enum=False,
+            length=13,
+        ),
+        nullable=True,
     )
 
     responses: Mapped[list[Response]] = relationship(

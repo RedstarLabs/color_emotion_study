@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from rgb_website.experiment import (
     PALETTE_VERSION,
     TRIAL_COUNT,
-    Emotion,
+    allowed_emotions_for_version,
     generate_random_colors,
 )
 from rgb_website.models import Response, SessionColor, SurveySession
@@ -24,14 +24,23 @@ class SurveyService:
         session_id: str,
         experiment_version: str = PALETTE_VERSION,
         trial_count: int = TRIAL_COUNT,
+        gender: str | None = "not_specified",
     ) -> SurveySession:
         if trial_count not in (10, 15):
             raise ValueError("Trial count must be 10 or 15.")
+        if gender is not None and gender not in {
+            "male",
+            "female",
+            "diverse",
+            "not_specified",
+        }:
+            raise ValueError("Gender is not allowed.")
         survey_session = SurveySession(
             id=session_id,
             experiment_version=experiment_version,
             palette_version=PALETTE_VERSION,
             trial_count=trial_count,
+            gender=gender,
         )
         try:
             self.sessions.add(survey_session)
@@ -85,7 +94,7 @@ class SurveyService:
             raise ValueError("Trial number does not match the current color.")
         if experiment_version != session.experiment_version:
             raise ValueError("Experiment version does not match the session.")
-        if emotion not in {item.value for item in Emotion}:
+        if emotion not in allowed_emotions_for_version(session.experiment_version):
             raise ValueError("Emotion is not allowed.")
         response = Response(
             session_id=session_id,

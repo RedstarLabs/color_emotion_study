@@ -9,6 +9,8 @@ from rgb_website.config import get_settings
 from rgb_website.database.session import get_db
 from rgb_website.schemas import (
     ExperimentStateResponse,
+    Gender,
+    StartExperimentRequest,
     StartExperimentResponse,
     SubmitResponseRequest,
     SubmitResponseResult,
@@ -52,6 +54,7 @@ def _state(service: SurveyService, session_id: str) -> ExperimentStateResponse:
             else None
         ),
         experiment_version=session.experiment_version,
+        gender=session.gender,
     )
 
 
@@ -62,11 +65,13 @@ def _state(service: SurveyService, session_id: str) -> ExperimentStateResponse:
 )
 def start_experiment(
     db: DatabaseSession,
+    payload: StartExperimentRequest | None = None,
 ) -> StartExperimentResponse:
     service = SurveyService(db)
     session = service.create_session(
         uuid4().hex,
         trial_count=get_settings().default_trial_count,
+        gender=(payload.gender if payload else Gender.NOT_SPECIFIED).value,
     )
     return _state(service, session.id)
 

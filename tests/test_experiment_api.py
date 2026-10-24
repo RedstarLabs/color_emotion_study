@@ -111,9 +111,35 @@ def test_invalid_emotion_and_color_are_rejected(client: TestClient) -> None:
     assert (
         client.post(
             f"/api/experiments/{session_id}/responses",
+            json={**payload, "emotion": "Vertrauen"},
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            f"/api/experiments/{session_id}/responses",
             json={**payload, "color_id": "unknown", "emotion": "Freude"},
         ).status_code
         == 409
+    )
+
+
+@pytest.mark.parametrize("gender", ["male", "female", "diverse", "not_specified"])
+def test_gender_is_saved_on_new_session(client: TestClient, gender: str) -> None:
+    started = client.post("/api/experiments", json={"gender": gender})
+    assert started.status_code == 201
+    assert started.json()["gender"] == gender
+
+
+def test_gender_can_be_omitted(client: TestClient) -> None:
+    started = client.post("/api/experiments")
+    assert started.status_code == 201
+    assert started.json()["gender"] == "not_specified"
+
+
+def test_invalid_gender_is_rejected(client: TestClient) -> None:
+    assert (
+        client.post("/api/experiments", json={"gender": "unknown"}).status_code == 422
     )
 
 

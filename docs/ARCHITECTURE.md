@@ -16,8 +16,9 @@ Grundlage. Die Anwendung ist nicht für eine reale Erhebung freigegeben.
 - Die Export-Schicht streamt CSV-Zeilen ohne temporäre Exportdatei.
 
 SQLite dient der lokalen Entwicklung; PostgreSQL ist über `DATABASE_URL` für
-den Produktivbetrieb konfigurierbar. Datenbankmodelle und Migrationen bilden
-RGB-Werte, Positionen, Antworten, Status, Versuchslänge und Zeitstempel ab.
+den Produktivbetrieb konfigurierbar. Datenbankmodelle und Migrationen bilden RGB-Werte, Positionen, Antworten,
+Status, Versuchslänge, Versuchsversion, freiwillige Geschlechtsangabe und
+Zeitstempel ab.
 
 ## Versuchserzeugung
 
@@ -31,7 +32,9 @@ Gleichverteilung wahrgenommener Farben.
 ## API und Datenfluss
 
 - `POST /api/experiments` startet einen Versuch anhand von
-  `DEFAULT_TRIAL_COUNT`.
+  `DEFAULT_TRIAL_COUNT` und nimmt optional `gender` (`male`, `female`,
+  `diverse`, `not_specified`) entgegen. Ohne Auswahl wird `not_specified`
+  gespeichert.
 - `GET /api/experiments/{session_id}` liefert Status, Fortschritt und nur die
   nächste Farbe.
 - `POST /api/experiments/{session_id}/responses` validiert und speichert eine
@@ -41,7 +44,10 @@ Gleichverteilung wahrgenommener Farben.
 - `GET /api/admin/export` liefert nach `X-Admin-Token`-Authentifizierung den
   CSV-Export.
 
-RGB-Werte werden nie aus Antwortdaten des Clients übernommen. Ein Versuch
+Neue Sitzungen verwenden `random-rgb-2.0` und genau sieben Emotionen:
+Wut, Angst, Freude, Trauer, Überraschung, Verachtung und Ekel. Die frühere
+Version `random-rgb-1.0` bleibt für historische Daten auswertbar; dort kann
+`Vertrauen` unverändert vorkommen. RGB-Werte werden nie aus Antwortdaten des Clients übernommen. Ein Versuch
 wird nach seinem unveränderlichen `trial_count`-Snapshot abgeschlossen.
 Doppelte Antworten werden zusätzlich durch Datenbank-Unique-Constraints
 verhindert. Antworten und Statusänderung werden in einer Transaktion

@@ -1,8 +1,20 @@
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from rgb_website.experiment import PALETTE_VERSION, Emotion
+
+
+class Gender(StrEnum):
+    MALE = "male"
+    FEMALE = "female"
+    DIVERSE = "diverse"
+    NOT_SPECIFIED = "not_specified"
+
+
+class StartExperimentRequest(BaseModel):
+    gender: Gender = Gender.NOT_SPECIFIED
 
 
 class ColorResponse(BaseModel):
@@ -22,6 +34,7 @@ class ExperimentStateResponse(BaseModel):
     total_count: int = Field(ge=10, le=15)
     next_color: ColorResponse | None
     experiment_version: str = PALETTE_VERSION
+    gender: Gender | None
 
 
 class StartExperimentResponse(ExperimentStateResponse):
