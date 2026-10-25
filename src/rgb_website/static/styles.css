@@ -1,9 +1,9 @@
 :root {
-  color: #17212b;
-  background: #f4f6f8;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+  color: #1f2933;
+  background: #f7f8f6;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
-  line-height: 1.5;
+  line-height: 1.6;
   font-synthesis: none;
 }
 
@@ -30,26 +30,25 @@ body {
   min-width: 320px;
 }
 
+a {
+  color: #28616b;
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  color: #1c4750;
+}
+
 button {
   font: inherit;
 }
 
-label,
 input {
-  display: block;
-}
-
-input {
-  width: 100%;
-  max-width: 32rem;
-  margin-top: 0.5rem;
-  padding: 0.7rem;
-  border: 1px solid #9aabb8;
-  border-radius: 0.4rem;
+  accent-color: #28616b;
 }
 
 input:focus-visible {
-  outline: 3px solid #e09f3e;
+  outline: 3px solid #d39b52;
   outline-offset: 2px;
 }
 
@@ -57,32 +56,41 @@ input:focus-visible {
   display: grid;
   min-height: 100vh;
   place-items: center;
-  padding: 1.5rem;
+  padding: clamp(1rem, 4vw, 3rem);
 }
 
 .panel {
-  width: min(100%, 46rem);
-  padding: clamp(1.5rem, 5vw, 3rem);
-  border: 1px solid #d9e0e6;
-  border-radius: 0.75rem;
+  width: min(100%, 56rem);
+  padding: clamp(1.5rem, 5vw, 4rem);
+  border: 1px solid #e1e7e4;
+  border-radius: 1.25rem;
   background: #fff;
-  box-shadow: 0 0.5rem 1.75rem rgb(23 33 43 / 8%);
+  box-shadow: 0 1rem 3rem rgb(31 41 51 / 7%);
 }
 
 .eyebrow {
-  margin: 0 0 0.5rem;
-  color: #536575;
-  font-size: 0.8rem;
+  margin: 0 0 0.75rem;
+  color: #28616b;
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 h1 {
-  margin: 0 0 1rem;
-  color: #17212b;
-  font-size: clamp(1.6rem, 4vw, 2.25rem);
+  margin: 0;
+  color: #1f2933;
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
   line-height: 1.15;
+}
+
+h2 {
+  margin: 0.35rem 0 0.5rem;
+  color: #1f2933;
+  font-size: 1rem;
+  line-height: 1.3;
 }
 
 p {
@@ -90,7 +98,124 @@ p {
 }
 
 .muted {
-  color: #536575;
+  color: #62716f;
+}
+
+.intro-header {
+  max-width: 42rem;
+}
+
+.intro-lead {
+  margin: 1.25rem 0 0;
+  color: #526361;
+  font-size: clamp(1.05rem, 2vw, 1.2rem);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 3rem 0;
+}
+
+.info-card {
+  padding: 1.25rem;
+  border-top: 2px solid #c9dcd7;
+  background: #f7f9f7;
+}
+
+.info-card p:last-child {
+  margin-bottom: 0;
+  color: #62716f;
+  font-size: 0.95rem;
+}
+
+.info-label {
+  margin: 0;
+  color: #28616b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.start-section {
+  padding-top: 1.75rem;
+  border-top: 1px solid #e1e7e4;
+}
+
+.section-heading {
+  margin-bottom: 1rem;
+}
+
+.section-heading h2 {
+  font-size: 1.35rem;
+}
+
+.confirmation-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid #dce5e1;
+  border-radius: 0.6rem;
+  background: #fbfcfb;
+  cursor: pointer;
+}
+
+.check-row:hover {
+  border-color: #aac9c1;
+}
+
+.check-row input {
+  flex: 0 0 auto;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0.2rem 0 0;
+}
+
+.gender-section {
+  margin-top: 2rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid #e1e7e4;
+}
+
+.gender-section legend {
+  margin-bottom: 0.25rem;
+  font-size: 1.05rem;
+}
+
+.gender-section .muted {
+  margin-top: 0;
+  font-size: 0.9rem;
+}
+
+.gender-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.option-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #dce5e1;
+  border-radius: 0.5rem;
+  color: #40514f;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.option-chip:hover {
+  border-color: #aac9c1;
 }
 
 .primary-button,
@@ -103,14 +228,14 @@ p {
 }
 
 .primary-button {
-  margin-top: 1rem;
-  padding: 0.75rem 1.25rem;
+  margin-top: 2rem;
+  padding: 0.8rem 1.4rem;
   color: #fff;
-  background: #245b80;
+  background: #28616b;
 }
 
 .primary-button:hover {
-  background: #1b4865;
+  background: #1c4750;
 }
 
 .primary-button:disabled,
@@ -123,7 +248,7 @@ p {
 .primary-button:focus-visible,
 .secondary-button:focus-visible,
 .emotion-button:focus-visible {
-  outline: 3px solid #e09f3e;
+  outline: 3px solid #d39b52;
   outline-offset: 3px;
 }
 
@@ -204,6 +329,15 @@ legend {
 }
 
 @media (max-width: 39rem) {
+  .info-grid,
+  .gender-options {
+    grid-template-columns: 1fr;
+  }
+
+  .info-grid {
+    margin: 2rem 0;
+  }
+
   .study-header {
     display: block;
   }

@@ -20,7 +20,17 @@ def _require_admin(token: str | None) -> None:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Administrative export is not configured.",
         )
-    if not token or not secrets.compare_digest(token, configured_token):
+    if token is None:
+        token_matches = False
+    else:
+        try:
+            token_matches = secrets.compare_digest(
+                token.encode("utf-8"),
+                configured_token.encode("utf-8"),
+            )
+        except UnicodeEncodeError:
+            token_matches = False
+    if not token_matches:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Administrative authentication required.",

@@ -6,13 +6,19 @@ Eine datenschutzbewusste Web-App zur Untersuchung der Zuordnung von Farben und E
 
 ColorEmotionStudy ist eine eigenständige Forschungsanwendung, mit der untersucht wird, welche Emotionen Menschen mit unterschiedlichen Farben verbinden.
 
-Teilnehmende öffnen die Website über einen Link und beurteilen standardmäßig zehn, konfigurierbar fünfzehn, nacheinander angezeigte Farben. Jede Farbe wird durch unabhängig und gleichverteilt erzeugte RGB-Werte definiert. Die Teilnehmenden können vorab freiwillig eine Geschlechtsangabe machen und
+Teilnehmende öffnen die Website über einen Link und beurteilen 10 nacheinander angezeigte Farben. Jede Farbe wird durch unabhängig und gleichverteilt erzeugte RGB-Werte definiert. Die Teilnehmenden können vorab freiwillig eine Geschlechtsangabe machen und
 wählen für jede Farbe genau eine von sieben vorgegebenen Emotionen aus:
-Wut, Angst, Freude, Trauer, Überraschung, Verachtung oder Ekel.
+Wut, Angst, Freude, Traurigkeit, Überraschung, Verachtung oder Ekel.
 
 Die Antworten werden unmittelbar gespeichert und können anschließend als CSV-Datei für statistische Analysen und Machine-Learning-Experimente exportiert werden.
 
 Das Projekt ist für die eigenständige Forschung konzipiert und nicht von der Infrastruktur einer Universität abhängig.
+
+Für den Produktionsbetrieb mit SQLite muss `DATABASE_URL` einen absoluten
+Pfad auf die zuvor gesicherte und migrierte Datenbank verwenden. Bei
+`APP_ENV=production` werden relative SQLite-Pfade abgelehnt. `/health` prüft
+nur die Prozess-Liveness; `/ready` prüft zusätzlich Datenbankverbindung und
+Migrationsstand.
 
 ## Kernfunktionen
 
@@ -20,7 +26,7 @@ Das Projekt ist für die eigenständige Forschung konzipiert und nicht von der I
 - Responsive Benutzeroberfläche für Smartphones, Tablets und Laptops
 - Anzeige einer einzelnen Farbe pro Durchgang
 - Kryptografisch unterstützte, kanalweise gleichverteilte RGB-Farben pro Umfragesitzung
-- Konfigurierbare Versuchslänge von 10 oder 15 Durchgängen
+- Genau 10 Durchgänge pro neuem Versuch
 - Speicherung der exakten RGB-Werte jeder gezeigten Farbe
 - Sieben feste Emotionskategorien
 - Genau eine Emotion pro Durchgang
@@ -41,14 +47,14 @@ Neue Sitzungen verwenden `random-rgb-2.0` mit:
 1. Wut
 2. Angst
 3. Freude
-4. Trauer
+4. Traurigkeit
 5. Überraschung
 6. Verachtung
 7. Ekel
 
 `Vertrauen` wird in neuen Sitzungen nicht mehr angeboten oder akzeptiert.
 Historische Sitzungen der Version `random-rgb-1.0` behalten Antworten mit
-`Vertrauen` unverändert.
+`Trauer` oder `Vertrauen` unverändert.
 
 Die Geschlechtsangabe ist eine freiwillige Selbstauskunft mit den internen
 Werten `male`, `female`, `diverse` und `not_specified`. Ohne Auswahl wird
@@ -90,16 +96,21 @@ Die Anwendung soll zunächst als schlanke, serverseitig ausgelieferte Web-App im
 ## Grundlegender Ablauf
 
 1. Eine Person öffnet die Website.
-2. Die Informationsseite erläutert Zweck, Ablauf und Datenschutz.
-3. Die Person beginnt freiwillig mit der Umfrage.
-4. Das System erzeugt eine zufällige Sitzungskennung.
-5. Die Anwendung erzeugt 10 oder 15 RGB-Farben nach der konfigurierten Zufallsstrategie und speichert sie dauerhaft.
-6. Eine Farbe wird angezeigt.
-7. Die Person wählt eine der sieben Emotionen.
-8. Das Backend validiert und speichert die Antwort.
-9. Erst nach bestätigter Speicherung wird die nächste Farbe angezeigt.
-10. Nach der gespeicherten Anzahl erfolgreicher Antworten wird eine Abschlussseite angezeigt.
-11. Ein berechtigter Administrator kann die Daten als CSV exportieren.
+2. Die Informationsseite erläutert Zweck, Ablauf, Freiwilligkeit,
+   Abbruchmöglichkeiten und Datenschutz.
+3. Vor dem Start müssen Altersbestätigung, Kenntnisnahme der Informationen und
+   eine getrennte freiwillige Teilnahmebestätigung serverseitig bestätigt
+   werden. Die konkrete Altersgrenze ist vor Veröffentlichung durch die
+   Studienleitung einzusetzen.
+4. Die Person beginnt freiwillig mit der Umfrage.
+5. Das System erzeugt eine zufällige Sitzungskennung.
+6. Die Anwendung erzeugt genau 10 RGB-Farben nach der festgelegten Zufallsstrategie und speichert sie dauerhaft.
+7. Eine Farbe wird angezeigt.
+8. Die Person wählt eine der sieben Emotionen.
+9. Das Backend validiert und speichert die Antwort.
+10. Erst nach bestätigter Speicherung wird die nächste Farbe angezeigt.
+11. Nach der gespeicherten Anzahl erfolgreicher Antworten wird eine Abschlussseite angezeigt.
+12. Ein berechtigter Administrator kann die Daten als CSV exportieren.
 
 Ein unvollständiger Versuch kann ausdrücklich abgebrochen werden und erhält
 den Status `abandoned`. Nach einem Reload wird keine Sitzungskennung im Browser
@@ -118,14 +129,16 @@ Vorgesehene Felder:
 
 - `id`: interne technische Kennung
 - `session_id`: zufällige Kennung der Umfragesitzung
-- `trial_number`: Durchgang von 1 bis 10 oder 15
+- `trial_number`: Durchgang von 1 bis 10 bei neuen Sitzungen
 - `color_r`: Rotwert von 0 bis 255
 - `color_g`: Grünwert von 0 bis 255
 - `color_b`: Blauwert von 0 bis 255
 - `emotion`: eine der sieben erlaubten Kategorien
 - `color_order`: Position der Farbe innerhalb der Sitzung
 - `experiment_version`: Version der Versuchsdefinition
-- `trial_count`: unveränderlicher Snapshot der Versuchslänge (10 oder 15)
+- `trial_count`: unveränderlicher Snapshot der Versuchslänge; neue Sitzungen
+  enthalten 10 Farben. Der Wert 15 bleibt für laufende und historische
+  Sitzungen erhalten.
 - `response_timestamp`: serverseitiger Zeitstempel; bei historischen Antworten
   kann er fehlen
 
@@ -173,6 +186,15 @@ oder `@` erhalten ein Apostroph, damit Tabellenprogramme sie nicht als Formel
 ausführen. Unvollständige Sitzungen enthalten nur tatsächlich gespeicherte
 Antworten.
 
+## Deployment
+
+Der reproduzierbare Zielaufbau für Debian 12 ist in
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) beschrieben. Die zugehörigen
+[systemd](deploy/systemd/rgb-website.service)- und
+[Nginx](deploy/nginx/rgb-website.conf)-Dateien enthalten Platzhalter und
+müssen vor dem Betrieb mit `systemd-analyze verify` beziehungsweise `nginx -t`
+geprüft und an die Betreiber-Domain angepasst werden.
+
 Die CSV-Datei muss direkt mit Python und pandas verarbeitet werden können.
 
 Beispiel:
@@ -180,7 +202,7 @@ Beispiel:
 ```csv
 session_id,trial_number,color_r,color_g,color_b,emotion,color_order,experiment_version
 example-session,1,217,75,101,Freude,1,1.0
-example-session,2,42,130,190,Trauer,2,1.0
+example-session,2,42,130,190,Traurigkeit,2,2.0
 ```
 
 Die Beispieldaten sind synthetisch und dürfen nicht als echte Forschungsergebnisse interpretiert werden.

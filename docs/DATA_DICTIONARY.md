@@ -12,8 +12,8 @@ Erhebung wissenschaftlich freigegeben.
 | `survey_sessions.id` | zufällige Zeichenkette | Nicht sprechende Versuchskennung ohne Personendaten. |
 | `survey_sessions.status` | Status | `in_progress`, `completed` oder `abandoned`. |
 | `survey_sessions.experiment_version` | Zeichenkette | Version der Versuchsdefinition. |
-| `survey_sessions.palette_version` | Zeichenkette | `random-rgb-1.0`. |
-| `survey_sessions.trial_count` | Ganzzahl | Unveränderlicher Snapshot: ausschließlich 10 oder 15. |
+| `survey_sessions.palette_version` | Zeichenkette | Version der gespeicherten Farbpalette, aktuell `random-rgb-2.0`; historische Sitzungen können ältere Werte enthalten. |
+| `survey_sessions.trial_count` | Ganzzahl | Unveränderlicher Snapshot: 10 für neue Sitzungen; 15 bleibt für laufende und historische Sitzungen erhalten. |
 | `survey_sessions.gender` | Zeichenkette/null | Freiwillige Selbstauskunft: `male`, `female`, `diverse` oder `not_specified`; bei historischen Sitzungen ohne Angabe bleibt der Wert null. |
 | `session_colors.color_id` | Zeichenkette | Positionsbezogene ID wie `trial-1`, keine Farbbezeichnung. |
 | `session_colors.position` | Ganzzahl | Position 1 bis 15 innerhalb der Sitzung. |
@@ -31,7 +31,7 @@ und dauerhaft gespeichert. RGB-Wiederholungen sind zulässig.
 | `color_id` | Zeichenkette | Referenz auf eine Farbe dieser Sitzung. |
 | `trial_number` | Ganzzahl | Position des Durchgangs, 1 bis 15. |
 | `color_r/g/b` | Ganzzahlen | Snapshot der angezeigten RGB-Werte, 0 bis 255. |
-| `emotion` | Zeichenkette | Für `random-rgb-2.0`: Wut, Angst, Freude, Trauer, Überraschung, Verachtung oder Ekel. Ältere Versionen können zusätzlich `Vertrauen` enthalten. |
+| `emotion` | Zeichenkette | Für `random-rgb-2.0`: Wut, Angst, Freude, Traurigkeit, Überraschung, Verachtung oder Ekel. `random-rgb-1.0` kann historisch zusätzlich `Trauer` und `Vertrauen` enthalten. |
 | `color_order` | Ganzzahl | Position der Farbe, 1 bis 15. |
 | `experiment_version` | Zeichenkette | Version der Versuchsdefinition. |
 | `response_timestamp` | Zeitstempel/null | Serverzeit; bei historischen Datensätzen eventuell nicht vorhanden. |
@@ -48,14 +48,19 @@ bleiben zunächst `in_progress`, bis eine explizite Abbruchaktion erfolgt.
 ## Emotionskategorien und Versuchsversionen
 
 Neue Sitzungen verwenden `random-rgb-2.0` und exakt diese sieben Werte:
-Wut, Angst, Freude, Trauer, Überraschung, Verachtung und Ekel. `Vertrauen`
-wird für neue Sitzungen abgelehnt. Historische Antworten werden nicht
-umgedeutet: Sitzungen mit `random-rgb-1.0` dürfen `Vertrauen` unverändert
-enthalten und bleiben über ihre Versuchsversion unterscheidbar.
+Wut, Angst, Freude, Traurigkeit, Überraschung, Verachtung und Ekel.
+`Vertrauen` und die historische Bezeichnung `Trauer` werden für neue
+Sitzungen abgelehnt. Historische Antworten werden nicht umgedeutet: Sitzungen
+mit `random-rgb-1.0` dürfen beide Werte unverändert enthalten und bleiben über
+ihre Versuchsversion unterscheidbar.
 
 `gender` ist eine freiwillige Selbstauskunft. `not_specified` bedeutet, dass
 keine Auswahl gemacht wurde; daraus wird nicht automatisch auf das biologische
 Geschlecht geschlossen.
+
+Die Startbestätigungen `age_confirmed`, `information_acknowledged` und
+`participation_consent` werden nur für die serverseitige Startprüfung
+übertragen und nicht in der Forschungsdatenbank gespeichert.
 
 ## CSV-Export
 

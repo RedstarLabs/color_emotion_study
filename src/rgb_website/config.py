@@ -1,6 +1,7 @@
 from functools import lru_cache
+from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,15 +13,38 @@ class Settings(BaseSettings):
         default="sqlite:///./coloremotionstudy.db",
         min_length=1,
     )
-    default_trial_count: int = Field(default=10)
     admin_api_token: str | None = None
 
-    @field_validator("default_trial_count")
-    @classmethod
-    def validate_trial_count(cls, value: int) -> int:
-        if value not in (10, 15):
-            raise ValueError("DEFAULT_TRIAL_COUNT must be 10 or 15.")
-        return value
+    @model_validator(mode="after")
+    def validate_production_database_path(self) -> Settings:
+        if self.app_env.lower() in {
+            "production",
+            "prod",
+        }:
+            if self.app_host not in {"127.0.0.1", "localhost"}:
+                raise ValueError("Production APP_HOST must be local.")
+            if not self.admin_api_token or len(self.admin_api_token) < 32:
+                raise ValueError(
+                    "Production ADMIN_API_TOKEN must contain at least 32 characters."
+                )
+            if self.database_url.lower().startswith("sqlite"):
+                prefix = "sqlite:///"
+                if not self.database_url.startswith(prefix):
+                    raise ValueError(
+                        "Production SQLite DATABASE_URL must use sqlite:/// "
+                        "with an absolute path."
+                    )
+                database_path = self.database_url.removeprefix(prefix)
+                if (
+                    not Path(database_path.split("?", maxsplit=1)[0]).is_absolute()
+                    or "?" in database_path
+                    or "#" in database_path
+                ):
+                    raise ValueError(
+                        "Production SQLite DATABASE_URL must use an absolute "
+                        "path without URI parameters."
+                    )
+        return self
 
     model_config = SettingsConfigDict(
         env_file=None,

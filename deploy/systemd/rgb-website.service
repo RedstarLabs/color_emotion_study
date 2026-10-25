@@ -1,0 +1,23 @@
+[Unit]
+Description=RGB Website study application
+After=network.target
+
+[Service]
+Type=simple
+User=rgb-website
+Group=rgb-website
+WorkingDirectory=/opt/rgb-website
+EnvironmentFile=/etc/rgb-website/rgb-website.env
+ExecStart=/opt/rgb-website/.venv/bin/uvicorn rgb_website.main:app --host 127.0.0.1 --port 8000 --no-server-header
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/rgb-website
+ReadWritePaths=/var/log/rgb-website
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

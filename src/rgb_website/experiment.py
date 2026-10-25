@@ -5,7 +5,7 @@ from secrets import randbelow
 
 class Emotion(StrEnum):
     JOY = "Freude"
-    SADNESS = "Trauer"
+    SADNESS = "Traurigkeit"
     ANGER = "Wut"
     FEAR = "Angst"
     DISGUST = "Ekel"
@@ -15,7 +15,18 @@ class Emotion(StrEnum):
 
 PALETTE_VERSION = "random-rgb-2.0"
 LEGACY_PALETTE_VERSION = "random-rgb-1.0"
-LEGACY_EMOTIONS = frozenset((*[emotion.value for emotion in Emotion], "Vertrauen"))
+LEGACY_EMOTIONS = frozenset(
+    (
+        "Wut",
+        "Angst",
+        "Freude",
+        "Trauer",
+        "Überraschung",
+        "Verachtung",
+        "Ekel",
+        "Vertrauen",
+    )
+)
 CURRENT_EMOTIONS = frozenset(emotion.value for emotion in Emotion)
 TRIAL_COUNT = 10
 ALLOWED_TRIAL_COUNTS = (10, 15)

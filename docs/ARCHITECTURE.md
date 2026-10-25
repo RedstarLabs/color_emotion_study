@@ -23,7 +23,7 @@ Zeitstempel ab.
 ## Versuchserzeugung
 
 `experiment.py` erzeugt pro Durchgang jeden RGB-Kanal unabhängig und
-gleichverteilt mit `secrets.randbelow(256)`. Die 10 oder 15 erzeugten Farben
+gleichverteilt mit `secrets.randbelow(256)`. Die 10 erzeugten Farben
 werden als `session_colors` gespeichert. Ihre IDs (`trial-1` usw.), Positionen
 und RGB-Werte bleiben nach dem Start unverändert. Zufällige identische
 RGB-Tripel sind zulässig; eine kanalweise Gleichverteilung garantiert keine
@@ -31,10 +31,12 @@ Gleichverteilung wahrgenommener Farben.
 
 ## API und Datenfluss
 
-- `POST /api/experiments` startet einen Versuch anhand von
-  `DEFAULT_TRIAL_COUNT` und nimmt optional `gender` (`male`, `female`,
+- `POST /api/experiments` startet immer einen Versuch mit 10 Farben und nimmt
+  optional `gender` (`male`, `female`,
   `diverse`, `not_specified`) entgegen. Ohne Auswahl wird `not_specified`
-  gespeichert.
+  gespeichert. Zusätzlich müssen `age_confirmed`,
+  `information_acknowledged` und `participation_consent` wahr sein; diese
+  Startbestätigungen werden nicht gespeichert.
 - `GET /api/experiments/{session_id}` liefert Status, Fortschritt und nur die
   nächste Farbe.
 - `POST /api/experiments/{session_id}/responses` validiert und speichert eine
@@ -43,11 +45,16 @@ Gleichverteilung wahrgenommener Farben.
   Versuch ausdrücklich als `abandoned`.
 - `GET /api/admin/export` liefert nach `X-Admin-Token`-Authentifizierung den
   CSV-Export.
+- `GET /health` ist ein einfacher Prozess-Liveness-Check. `GET /ready` prüft
+  zusätzlich die Datenbankverbindung und den erwarteten Alembic-Stand
+  `0005_session_gender`; der Reverse Proxy darf nur bereite Instanzen mit
+  Forschungsverkehr versorgen.
 
 Neue Sitzungen verwenden `random-rgb-2.0` und genau sieben Emotionen:
-Wut, Angst, Freude, Trauer, Überraschung, Verachtung und Ekel. Die frühere
-Version `random-rgb-1.0` bleibt für historische Daten auswertbar; dort kann
-`Vertrauen` unverändert vorkommen. RGB-Werte werden nie aus Antwortdaten des Clients übernommen. Ein Versuch
+Wut, Angst, Freude, Traurigkeit, Überraschung, Verachtung und Ekel. Die
+frühere Version `random-rgb-1.0` bleibt für historische Daten auswertbar;
+dort können `Trauer` und `Vertrauen` unverändert vorkommen. RGB-Werte werden
+nie aus Antwortdaten des Clients übernommen. Ein Versuch
 wird nach seinem unveränderlichen `trial_count`-Snapshot abgeschlossen.
 Doppelte Antworten werden zusätzlich durch Datenbank-Unique-Constraints
 verhindert. Antworten und Statusänderung werden in einer Transaktion
@@ -72,6 +79,17 @@ oder `@` durch ein Apostroph vor Spreadsheet-Formula-Injection.
 Ein API-Token allein ersetzt keine sichere Produktionsbereitstellung:
 HTTPS, restriktive Serverkonfiguration, Zugriffsschutz, Rate-Limiting und
 angemessene Protokollierung bleiben erforderlich.
+
+Für eine Produktionsumgebung mit SQLite muss `DATABASE_URL` einen absoluten
+Pfad verwenden. Ein relativer SQLite-Pfad wird bei `APP_ENV=production`
+abgelehnt, damit ein abweichendes Working Directory nicht versehentlich eine
+neue leere Forschungsdatenbank erzeugt. Die Datenbank muss vor dem Start auf
+den erwarteten Migrationsstand gebracht und der Readiness-Endpunkt geprüft
+werden.
+
+Der Zielbetrieb ist mit einem nichtprivilegierten systemd-Service und lokalem
+Uvicorn-Binding in [DEPLOYMENT.md](DEPLOYMENT.md) beschrieben. Nginx übernimmt
+TLS, HTTP-zu-HTTPS-Redirect, Größenlimits und vorgeschaltete Rate-Limits.
 
 ## Datenschutz- und Betriebsgrenzen
 

@@ -10,27 +10,75 @@
   <body>
     <main class="page-shell">
       <section id="intro-view" class="panel" aria-labelledby="intro-title">
-        <p class="eyebrow">Forschungsstudie</p>
-        <h1 id="intro-title">Farben und Emotionen</h1>
-        <p>
-          In dieser kurzen Studie sehen Sie zehn oder fünfzehn Farben nacheinander. Wählen Sie
-          für jede Farbe genau eine Emotion aus.
-        </p>
-        <p class="muted">
-          Es werden keine Namen, Kontaktdaten oder Benutzerkonten benötigt.
-          Ihre Auswahl wird nach jeder Antwort gespeichert.
-        </p>
-        <fieldset>
+        <div class="intro-header">
+          <p class="eyebrow">Forschungsstudie</p>
+          <h1 id="intro-title">Farben und Emotionen</h1>
+          <p class="intro-lead">
+            Ordnen Sie Farben intuitiv einer Emotion zu. Ihre Antworten werden
+            direkt nach jeder Auswahl gespeichert.
+          </p>
+        </div>
+
+        <div class="info-grid" aria-label="Informationen zur Studie">
+          <article class="info-card">
+            <p class="info-label">01 · Ablauf</p>
+            <h2>Eine Farbe nach der anderen</h2>
+            <p>
+              Sie sehen 10 Farben nacheinander und wählen für
+              jede genau eine Emotion.
+            </p>
+          </article>
+          <article class="info-card">
+            <p class="info-label">02 · Freiwilligkeit</p>
+            <h2>Sie entscheiden selbst</h2>
+            <p>
+              Die Teilnahme ist freiwillig. Sie können die Studie jederzeit
+              über „Studie abbrechen“ beenden.
+            </p>
+          </article>
+          <article class="info-card">
+            <p class="info-label">03 · Datenschutz</p>
+            <h2>Vorab informiert</h2>
+            <p>
+              Bitte lesen Sie die
+              <a href="/datenschutz">Datenschutzhinweise</a> und das
+              <a href="/impressum">Impressum</a> vor dem Start.
+            </p>
+          </article>
+        </div>
+
+        <div class="start-section">
+          <div class="section-heading">
+            <p class="info-label">Teilnahme</p>
+            <h2>Bevor Sie beginnen</h2>
+          </div>
+          <div class="confirmation-list">
+            <label class="check-row">
+              <input id="age-confirmed" type="checkbox">
+              <span>Ich bestätige, dass ich mindestens 16 Jahre alt bin.</span>
+            </label>
+            <label class="check-row">
+              <input id="information-acknowledged" type="checkbox">
+              <span>Ich habe die Informationen zu Ablauf, Freiwilligkeit und Abbruch gelesen und verstanden.</span>
+            </label>
+            <label class="check-row">
+              <input id="participation-consent" type="checkbox">
+              <span>Ich bestätige meine freiwillige Teilnahme an dieser Studie.</span>
+            </label>
+          </div>
+        </div>
+
+        <fieldset class="gender-section">
           <legend>Freiwillige Selbstauskunft zum Geschlecht</legend>
           <p class="muted">
-            Bitte wählen Sie eine Option oder starten Sie ohne Auswahl.
+            Optional: Wählen Sie eine Option oder starten Sie ohne Auswahl.
             Daraus wird nicht automatisch auf das biologische Geschlecht geschlossen.
           </p>
-          <div id="gender-options">
-            <label><input type="radio" name="gender" value="male"> Männlich</label>
-            <label><input type="radio" name="gender" value="female"> Weiblich</label>
-            <label><input type="radio" name="gender" value="diverse"> Divers</label>
-            <label><input type="radio" name="gender" value="not_specified"> Keine Angabe</label>
+          <div id="gender-options" class="gender-options">
+            <label class="option-chip"><input type="radio" name="gender" value="male"> <span>Männlich</span></label>
+            <label class="option-chip"><input type="radio" name="gender" value="female"> <span>Weiblich</span></label>
+            <label class="option-chip"><input type="radio" name="gender" value="diverse"> <span>Divers</span></label>
+            <label class="option-chip"><input type="radio" name="gender" value="not_specified"> <span>Keine Angabe</span></label>
           </div>
         </fieldset>
         <button id="start-button" class="primary-button" type="button">

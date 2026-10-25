@@ -2,7 +2,7 @@ const EMOTIONS = [
   "Wut",
   "Angst",
   "Freude",
-  "Trauer",
+  "Traurigkeit",
   "Überraschung",
   "Verachtung",
   "Ekel",
@@ -21,6 +21,9 @@ const studyView = document.querySelector("#study-view");
 const completeView = document.querySelector("#complete-view");
 const startButton = document.querySelector("#start-button");
 const genderOptions = document.querySelector("#gender-options");
+const ageConfirmed = document.querySelector("#age-confirmed");
+const informationAcknowledged = document.querySelector("#information-acknowledged");
+const participationConsent = document.querySelector("#participation-consent");
 const introError = document.querySelector("#intro-error");
 const globalError = document.querySelector("#global-error");
 const studyMessage = document.querySelector("#study-message");
@@ -64,6 +67,7 @@ async function abandonStudy() {
       `/api/experiments/${encodeURIComponent(state.sessionId)}/abandon`,
       { method: "POST" },
     );
+    resetStudyState();
     show(introView);
     setMessage(
       introError,
@@ -145,6 +149,15 @@ function setButtonsDisabled(disabled) {
   });
 }
 
+function resetStudyState() {
+  state.sessionId = null;
+  state.experimentVersion = null;
+  state.color = null;
+  state.trialNumber = 0;
+  startButton.disabled = false;
+  setMessage(studyMessage, "");
+}
+
 async function startStudy() {
   if (state.busy) {
     return;
@@ -160,6 +173,9 @@ async function startStudy() {
       method: "POST",
       body: JSON.stringify({
         gender: selectedGender ? selectedGender.value : "not_specified",
+        age_confirmed: ageConfirmed.checked,
+        information_acknowledged: informationAcknowledged.checked,
+        participation_consent: participationConsent.checked,
       }),
     });
     renderState(payload);

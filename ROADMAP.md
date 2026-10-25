@@ -59,7 +59,8 @@ Die Entwicklung erfolgt inkrementell. Jede Phase wird erst abgeschlossen, wenn i
 - [x] Sieben Emotionskategorien zentral definieren
 - [x] RGB-Datentyp und Wertebereich von 0 bis 255 validieren
 - [x] Strategie zur Farbauswahl implementieren
-- [x] Genau zehn Farben pro Sitzung erzeugen
+- [x] Genau 10 Farben pro neuer Sitzung erzeugen; bestehende 15er-Sitzungen
+  bleiben fortsetzbar.
 - [x] Zufallsstrategie und Versuchsparameter versionieren
 - [x] Farbwerte und Reihenfolge für jede Sitzung festhalten
 - [x] Festlegen, ob identische Farben innerhalb einer Sitzung ausgeschlossen werden
@@ -68,7 +69,7 @@ Die Entwicklung erfolgt inkrementell. Jede Phase wird erst abgeschlossen, wenn i
 
 ### Akzeptanzkriterien
 
-- [x] Jede Sitzung besitzt genau zehn geplante Durchgänge.
+- [x] Jede neue Sitzung besitzt genau 15 geplante Durchgänge.
 - [x] Jeder RGB-Wert ist gültig.
 - [x] Die Reihenfolge lässt sich aus den gespeicherten Daten rekonstruieren.
 - [x] Es gibt keine unbemerkte Änderung der Versuchsdefinition während einer Sitzung.
@@ -85,7 +86,8 @@ Eine zufällige Auswahl aus einer festen Palette und eine Erzeugung zufälliger 
 - [x] Start- und Informationsseite erstellen
 - [x] Große, gut sichtbare Farbanzeige implementieren
 - [x] Sieben gut bedienbare Emotionsbuttons erstellen
-- [x] Fortschrittsanzeige für zehn Durchgänge implementieren
+- [x] Fortschrittsanzeige anhand des gespeicherten Sitzungs-Snapshots
+  implementieren
 - [x] Darstellung für Smartphones und Laptops optimieren
 - [x] Tastaturbedienung und zugängliche Beschriftungen berücksichtigen
 - [x] Ladezustand während der Speicherung anzeigen

@@ -1,17 +1,23 @@
 from collections.abc import Generator
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from pydantic import ValidationError
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from rgb_website.config import Settings, get_settings
+from rgb_website.config import get_settings
 from rgb_website.database.base import Base
 from rgb_website.database.session import get_db
 from rgb_website.export import _safe_text, iter_csv_rows
 from rgb_website.main import create_app
+
+START_CONFIRMATIONS = {
+    "age_confirmed": True,
+    "information_acknowledged": True,
+    "participation_consent": True,
+}
 
 
 @pytest.fixture
@@ -45,34 +51,30 @@ def test_random_colors_accept_rgb_boundaries(monkeypatch: pytest.MonkeyPatch) ->
     assert (color.red, color.green, color.blue) == (0, 255, 0)
 
 
-def test_trial_count_is_configurable_and_snapshotted(
+def test_new_sessions_use_ten_trials_even_if_legacy_inputs_are_sent(
     phase4_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("DEFAULT_TRIAL_COUNT", "15")
-    get_settings.cache_clear()
-    started = phase4_client.post("/api/experiments")
+    monkeypatch.setenv("DEFAULT_TRIAL_COUNT", "10")
+    started = phase4_client.post(
+        "/api/experiments",
+        json={**START_CONFIRMATIONS, "trial_count": 10},
+    )
 
     assert started.status_code == 201
     body = started.json()
-    assert body["total_count"] == 15
-
-    monkeypatch.setenv("DEFAULT_TRIAL_COUNT", "10")
-    get_settings.cache_clear()
-    state = phase4_client.get(f"/api/experiments/{body['session_id']}")
-    assert state.json()["total_count"] == 15
+    assert body["total_count"] == 10
 
 
-def test_fifteen_trial_session_completes(
+def test_ten_trial_session_completes(
     phase4_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("DEFAULT_TRIAL_COUNT", "15")
     get_settings.cache_clear()
-    started = phase4_client.post("/api/experiments").json()
+    started = phase4_client.post("/api/experiments", json=START_CONFIRMATIONS).json()
     endpoint = f"/api/experiments/{started['session_id']}/responses"
 
-    for trial_number in range(1, 16):
+    for trial_number in range(1, 11):
         state = phase4_client.get(f"/api/experiments/{started['session_id']}").json()
         response = phase4_client.post(
             endpoint,
@@ -91,18 +93,16 @@ def test_fifteen_trial_session_completes(
     )
 
 
-def test_invalid_trial_count_configuration_is_rejected() -> None:
-    with pytest.raises(ValidationError):
-        Settings(default_trial_count=11)
-
-
 def test_export_requires_token_and_protects_formula_text(
     phase4_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("ADMIN_API_TOKEN", "test-token")
     get_settings.cache_clear()
-    session_id = phase4_client.post("/api/experiments").json()["session_id"]
+    session_id = phase4_client.post(
+        "/api/experiments",
+        json=START_CONFIRMATIONS,
+    ).json()["session_id"]
     state = phase4_client.get(f"/api/experiments/{session_id}").json()
     phase4_client.post(
         f"/api/experiments/{session_id}/responses",
@@ -115,15 +115,37 @@ def test_export_requires_token_and_protects_formula_text(
     )
 
     assert phase4_client.get("/api/admin/export").status_code == 401
+    assert (
+        phase4_client.get(
+            "/api/admin/export",
+            headers={"X-Admin-Token": "wrong-token"},
+        ).status_code
+        == 401
+    )
     exported = phase4_client.get(
         "/api/admin/export",
         headers={"X-Admin-Token": "test-token"},
     )
     assert exported.status_code == 200
     assert exported.headers["cache-control"] == "no-store"
+    assert exported.headers["x-content-type-options"] == "nosniff"
     assert "response_timestamp" in exported.text.splitlines()[0]
     assert "gender" in exported.text.splitlines()[0]
     assert _safe_text("=formula") == "'=formula"
+
+
+def test_admin_rejects_unicode_token_without_server_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from rgb_website.api.admin import _require_admin
+
+    monkeypatch.setenv("ADMIN_API_TOKEN", "test-token")
+    get_settings.cache_clear()
+
+    with pytest.raises(HTTPException) as error:
+        _require_admin("falsches-Töken-😀")
+
+    assert error.value.status_code == 401
 
 
 def test_export_is_closed_when_token_is_not_configured(
@@ -145,6 +167,7 @@ def test_legacy_trust_and_optional_gender_are_exported_unchanged(
     service.create_session(
         "legacy-export",
         experiment_version="random-rgb-1.0",
+        trial_count=15,
         gender=None,
     )
     session = service.get_session("legacy-export")
@@ -158,10 +181,24 @@ def test_legacy_trust_and_optional_gender_are_exported_unchanged(
         emotion="Vertrauen",
         experiment_version="random-rgb-1.0",
     )
+    service.create_session("current-export", trial_count=10)
+    current_session = service.get_session("current-export")
+    assert current_session is not None
+    current_color = service.get_next_color(current_session)
+    assert current_color is not None
+    service.add_response(
+        session_id="current-export",
+        color_id=current_color.color_id,
+        trial_number=1,
+        emotion="Freude",
+        experiment_version="random-rgb-2.0",
+    )
 
     rows = list(iter_csv_rows(db_session))
     assert "gender" in rows[0]
-    assert "Vertrauen" in rows[1]
+    assert any("Vertrauen" in row for row in rows[1:])
+    assert any(",15," in row for row in rows[1:])
+    assert any(",10," in row for row in rows[1:])
 
 
 def test_named_constraints_are_present() -> None:

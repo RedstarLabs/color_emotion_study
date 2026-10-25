@@ -1,9 +1,9 @@
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from rgb_website.experiment import PALETTE_VERSION, Emotion
+from rgb_website.experiment import PALETTE_VERSION, allowed_emotions_for_version
 
 
 class Gender(StrEnum):
@@ -15,6 +15,19 @@ class Gender(StrEnum):
 
 class StartExperimentRequest(BaseModel):
     gender: Gender = Gender.NOT_SPECIFIED
+    age_confirmed: bool
+    information_acknowledged: bool
+    participation_consent: bool
+
+    @model_validator(mode="after")
+    def validate_required_confirmations(self) -> StartExperimentRequest:
+        if not self.age_confirmed:
+            raise ValueError("Age confirmation is required.")
+        if not self.information_acknowledged:
+            raise ValueError("Study information must be acknowledged.")
+        if not self.participation_consent:
+            raise ValueError("Participation consent is required.")
+        return self
 
 
 class ColorResponse(BaseModel):
@@ -43,9 +56,15 @@ class StartExperimentResponse(ExperimentStateResponse):
 
 class SubmitResponseRequest(BaseModel):
     color_id: str = Field(min_length=1, max_length=32)
-    emotion: Emotion
+    emotion: str = Field(min_length=1, max_length=64)
     trial_number: int = Field(ge=1, le=15)
     experiment_version: str = Field(min_length=1, max_length=32)
+
+    @model_validator(mode="after")
+    def validate_emotion_for_version(self) -> SubmitResponseRequest:
+        if self.emotion not in allowed_emotions_for_version(self.experiment_version):
+            raise ValueError("Emotion is not allowed for this experiment version.")
+        return self
 
 
 class SubmitResponseResult(ExperimentStateResponse):

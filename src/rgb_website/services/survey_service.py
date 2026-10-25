@@ -27,7 +27,7 @@ class SurveyService:
         gender: str | None = "not_specified",
     ) -> SurveySession:
         if trial_count not in (10, 15):
-            raise ValueError("Trial count must be 10 or 15.")
+            raise ValueError("Survey sessions must contain 10 or 15 trials.")
         if gender is not None and gender not in {
             "male",
             "female",

@@ -5,11 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from rgb_website.config import get_settings
 from rgb_website.database.session import get_db
+from rgb_website.experiment import TRIAL_COUNT
 from rgb_website.schemas import (
     ExperimentStateResponse,
-    Gender,
     StartExperimentRequest,
     StartExperimentResponse,
     SubmitResponseRequest,
@@ -65,13 +64,13 @@ def _state(service: SurveyService, session_id: str) -> ExperimentStateResponse:
 )
 def start_experiment(
     db: DatabaseSession,
-    payload: StartExperimentRequest | None = None,
+    payload: StartExperimentRequest,
 ) -> StartExperimentResponse:
     service = SurveyService(db)
     session = service.create_session(
         uuid4().hex,
-        trial_count=get_settings().default_trial_count,
-        gender=(payload.gender if payload else Gender.NOT_SPECIFIED).value,
+        trial_count=TRIAL_COUNT,
+        gender=payload.gender.value,
     )
     return _state(service, session.id)
 
@@ -99,7 +98,7 @@ def submit_response(
             session_id=session_id,
             color_id=payload.color_id,
             trial_number=payload.trial_number,
-            emotion=payload.emotion.value,
+            emotion=payload.emotion,
             experiment_version=payload.experiment_version,
         )
     except LookupError as error:

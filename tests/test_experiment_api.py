@@ -10,6 +10,13 @@ from sqlalchemy.pool import StaticPool
 from rgb_website.database.base import Base
 from rgb_website.database.session import get_db
 from rgb_website.main import create_app
+from rgb_website.services import SurveyService
+
+START_CONFIRMATIONS = {
+    "age_confirmed": True,
+    "information_acknowledged": True,
+    "participation_consent": True,
+}
 
 
 @pytest.fixture
@@ -27,16 +34,17 @@ def client() -> Generator[TestClient]:
             yield session
 
     app.dependency_overrides[get_db] = override_get_db
+    app.state.test_engine = engine
     with TestClient(app) as test_client:
         yield test_client
     Base.metadata.drop_all(engine)
     engine.dispose()
 
 
-def test_start_persists_ten_distinct_colors_and_stable_order(
+def test_start_persists_ten_colors_and_stable_order(
     client: TestClient,
 ) -> None:
-    started = client.post("/api/experiments")
+    started = client.post("/api/experiments", json=START_CONFIRMATIONS)
     assert started.status_code == 201
     initial = started.json()
     session_id = initial["session_id"]
@@ -50,6 +58,7 @@ def test_start_persists_ten_distinct_colors_and_stable_order(
     assert first_state["next_color"] == initial["next_color"]
 
     seen_ids = []
+    assert initial["total_count"] == 10
     for trial_number in range(1, 11):
         state = client.get(f"/api/experiments/{session_id}").json()
         color = state["next_color"]
@@ -73,15 +82,98 @@ def test_start_persists_ten_distinct_colors_and_stable_order(
     assert completed["next_color"] is None
 
 
+def test_tenth_response_completes_new_ten_color_session(
+    client: TestClient,
+) -> None:
+    started = client.post("/api/experiments", json=START_CONFIRMATIONS)
+    assert started.status_code == 201
+    session_id = started.json()["session_id"]
+    endpoint = f"/api/experiments/{session_id}/responses"
+
+    for trial_number in range(1, 10):
+        state = client.get(f"/api/experiments/{session_id}").json()
+        assert state["next_color"]["position"] == trial_number
+        response = client.post(
+            endpoint,
+            json={
+                "color_id": state["next_color"]["id"],
+                "emotion": "Freude",
+                "trial_number": trial_number,
+                "experiment_version": state["experiment_version"],
+            },
+        )
+        assert response.status_code == 200
+
+    state = client.get(f"/api/experiments/{session_id}").json()
+    assert state["status"] == "in_progress"
+    assert state["answered_count"] == 9
+    assert state["total_count"] == 10
+    assert state["next_color"]["position"] == 10
+
+    response = client.post(
+        endpoint,
+        json={
+            "color_id": state["next_color"]["id"],
+            "emotion": "Freude",
+            "trial_number": 10,
+            "experiment_version": state["experiment_version"],
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["answered_count"] == 10
+    assert response.json()["status"] == "completed"
+    assert response.json()["next_color"] is None
+
+
+def test_existing_fifteen_trial_session_resumes_and_completes_via_api(
+    client: TestClient,
+) -> None:
+    with Session(client.app.state.test_engine) as db:
+        service = SurveyService(db)
+        service.create_session(
+            "existing-fifteen-session",
+            experiment_version="random-rgb-1.0",
+            trial_count=15,
+            gender=None,
+        )
+
+    endpoint = "/api/experiments/existing-fifteen-session/responses"
+    for trial_number in range(1, 16):
+        state = client.get("/api/experiments/existing-fifteen-session").json()
+        assert state["status"] == "in_progress"
+        assert state["total_count"] == 15
+        assert state["answered_count"] == trial_number - 1
+        assert state["next_color"]["position"] == trial_number
+        response = client.post(
+            endpoint,
+            json={
+                "color_id": state["next_color"]["id"],
+                "emotion": "Trauer",
+                "trial_number": trial_number,
+                "experiment_version": "random-rgb-1.0",
+            },
+        )
+        assert response.status_code == 200
+
+    completed = client.get("/api/experiments/existing-fifteen-session")
+    assert completed.status_code == 200
+    assert completed.json()["status"] == "completed"
+    assert completed.json()["answered_count"] == 15
+    assert completed.json()["total_count"] == 15
+    assert completed.json()["next_color"] is None
+
+
 def test_state_does_not_expose_previous_answers(client: TestClient) -> None:
-    session_id = client.post("/api/experiments").json()["session_id"]
+    session_id = client.post("/api/experiments", json=START_CONFIRMATIONS).json()[
+        "session_id"
+    ]
     state = client.get(f"/api/experiments/{session_id}").json()
     color = state["next_color"]
     client.post(
         f"/api/experiments/{session_id}/responses",
         json={
             "color_id": color["id"],
-            "emotion": "Trauer",
+            "emotion": "Traurigkeit",
             "trial_number": 1,
             "experiment_version": state["experiment_version"],
         },
@@ -94,7 +186,9 @@ def test_state_does_not_expose_previous_answers(client: TestClient) -> None:
 
 
 def test_invalid_emotion_and_color_are_rejected(client: TestClient) -> None:
-    session_id = client.post("/api/experiments").json()["session_id"]
+    session_id = client.post("/api/experiments", json=START_CONFIRMATIONS).json()[
+        "session_id"
+    ]
     state = client.get(f"/api/experiments/{session_id}").json()
     payload = {
         "color_id": state["next_color"]["id"],
@@ -118,6 +212,13 @@ def test_invalid_emotion_and_color_are_rejected(client: TestClient) -> None:
     assert (
         client.post(
             f"/api/experiments/{session_id}/responses",
+            json={**payload, "emotion": "Trauer"},
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            f"/api/experiments/{session_id}/responses",
             json={**payload, "color_id": "unknown", "emotion": "Freude"},
         ).status_code
         == 409
@@ -126,27 +227,36 @@ def test_invalid_emotion_and_color_are_rejected(client: TestClient) -> None:
 
 @pytest.mark.parametrize("gender", ["male", "female", "diverse", "not_specified"])
 def test_gender_is_saved_on_new_session(client: TestClient, gender: str) -> None:
-    started = client.post("/api/experiments", json={"gender": gender})
+    started = client.post(
+        "/api/experiments",
+        json={**START_CONFIRMATIONS, "gender": gender},
+    )
     assert started.status_code == 201
     assert started.json()["gender"] == gender
 
 
 def test_gender_can_be_omitted(client: TestClient) -> None:
-    started = client.post("/api/experiments")
+    started = client.post("/api/experiments", json=START_CONFIRMATIONS)
     assert started.status_code == 201
     assert started.json()["gender"] == "not_specified"
 
 
 def test_invalid_gender_is_rejected(client: TestClient) -> None:
     assert (
-        client.post("/api/experiments", json={"gender": "unknown"}).status_code == 422
+        client.post(
+            "/api/experiments",
+            json={**START_CONFIRMATIONS, "gender": "unknown"},
+        ).status_code
+        == 422
     )
 
 
 def test_duplicate_unknown_and_completed_requests_are_rejected(
     client: TestClient,
 ) -> None:
-    session_id = client.post("/api/experiments").json()["session_id"]
+    session_id = client.post("/api/experiments", json=START_CONFIRMATIONS).json()[
+        "session_id"
+    ]
     state = client.get(f"/api/experiments/{session_id}").json()
     payload = {
         "color_id": state["next_color"]["id"],
@@ -174,7 +284,9 @@ def test_duplicate_unknown_and_completed_requests_are_rejected(
 
 
 def test_invalid_trial_request_returns_conflict(client: TestClient) -> None:
-    session_id = client.post("/api/experiments").json()["session_id"]
+    session_id = client.post("/api/experiments", json=START_CONFIRMATIONS).json()[
+        "session_id"
+    ]
     state = client.get(f"/api/experiments/{session_id}").json()
     response = client.post(
         f"/api/experiments/{session_id}/responses",
@@ -189,7 +301,9 @@ def test_invalid_trial_request_returns_conflict(client: TestClient) -> None:
 
 
 def test_incomplete_session_can_be_explicitly_abandoned(client: TestClient) -> None:
-    session_id = client.post("/api/experiments").json()["session_id"]
+    session_id = client.post("/api/experiments", json=START_CONFIRMATIONS).json()[
+        "session_id"
+    ]
 
     abandoned = client.post(f"/api/experiments/{session_id}/abandon")
 
@@ -211,7 +325,9 @@ def test_incomplete_session_can_be_explicitly_abandoned(client: TestClient) -> N
 
 
 def test_completed_session_cannot_be_abandoned(client: TestClient) -> None:
-    session_id = client.post("/api/experiments").json()["session_id"]
+    session_id = client.post("/api/experiments", json=START_CONFIRMATIONS).json()[
+        "session_id"
+    ]
     endpoint = f"/api/experiments/{session_id}/responses"
     for trial_number in range(1, 11):
         state = client.get(f"/api/experiments/{session_id}").json()
@@ -245,7 +361,10 @@ def test_parallel_duplicate_requests_are_constrained(tmp_path) -> None:
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as first_client, TestClient(app) as second_client:
-        started = first_client.post("/api/experiments").json()
+        started = first_client.post(
+            "/api/experiments",
+            json=START_CONFIRMATIONS,
+        ).json()
         state = first_client.get(f"/api/experiments/{started['session_id']}").json()
         payload = {
             "color_id": state["next_color"]["id"],
