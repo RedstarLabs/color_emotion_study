@@ -1,3 +1,4 @@
+import smtplib
 from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor
 
@@ -7,10 +8,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+from rgb_website.config import get_settings
 from rgb_website.database.base import Base
 from rgb_website.database.session import get_db
 from rgb_website.main import create_app
-from rgb_website.services import SurveyService
+from rgb_website.services import SMTPEmailSender, SurveyService
 
 START_CONFIRMATIONS = {
     "age_confirmed": True,
@@ -123,6 +125,237 @@ def test_tenth_response_completes_new_ten_color_session(
     assert response.json()["answered_count"] == 10
     assert response.json()["status"] == "completed"
     assert response.json()["next_color"] is None
+
+
+def test_completion_notifies_once_with_completed_count_and_no_study_data(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("NOTIFICATION_ENABLED", "true")
+    monkeypatch.setenv("SMTP_HOST", "smtp.test.invalid")
+    monkeypatch.setenv("SMTP_FROM", "study@example.invalid")
+    monkeypatch.setenv("NOTIFICATION_OPERATOR_RECIPIENT", "operator@example.invalid")
+    monkeypatch.setenv(
+        "NOTIFICATION_TECHNICAL_RECIPIENT",
+        "technical@example.invalid",
+    )
+    get_settings.cache_clear()
+    messages: list[tuple[str, str, str]] = []
+
+    def capture(
+        self: SMTPEmailSender,
+        recipient: str,
+        subject: str,
+        body: str,
+    ) -> None:
+        messages.append((recipient, subject, body))
+
+    monkeypatch.setattr(SMTPEmailSender, "send", capture)
+    started = client.post("/api/experiments", json=START_CONFIRMATIONS).json()
+    session_id = started["session_id"]
+    endpoint = f"/api/experiments/{session_id}/responses"
+    final_payload = None
+
+    for trial_number in range(1, 11):
+        state = client.get(f"/api/experiments/{session_id}").json()
+        final_payload = {
+            "color_id": state["next_color"]["id"],
+            "emotion": "Freude",
+            "trial_number": trial_number,
+            "experiment_version": state["experiment_version"],
+        }
+        response = client.post(endpoint, json=final_payload)
+        assert response.status_code == 200
+        if trial_number < 10:
+            assert messages == []
+
+    assert len(messages) == 2
+    assert {message[0] for message in messages} == {
+        "operator@example.invalid",
+        "technical@example.invalid",
+    }
+    for _, subject, body in messages:
+        assert subject == "Neue Teilnahme – Farb-Emotions-Studie"
+        assert "Abgeschlossene Teilnahmen insgesamt: 1" in body
+        assert session_id not in body
+        assert "Freude" not in body
+        assert "rgb" not in body.lower()
+        assert "trial-" not in body
+
+    assert final_payload is not None
+    assert client.post(endpoint, json=final_payload).status_code == 409
+    assert len(messages) == 2
+
+    abandoned = client.post(
+        "/api/experiments",
+        json=START_CONFIRMATIONS,
+    ).json()["session_id"]
+    assert client.post(f"/api/experiments/{abandoned}/abandon").status_code == 200
+    assert len(messages) == 2
+    get_settings.cache_clear()
+
+
+def test_notification_failure_does_not_fail_completed_response(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("NOTIFICATION_ENABLED", "true")
+    monkeypatch.setenv("SMTP_HOST", "smtp.test.invalid")
+    monkeypatch.setenv("SMTP_FROM", "study@example.invalid")
+    monkeypatch.setenv("NOTIFICATION_OPERATOR_RECIPIENT", "operator@example.invalid")
+    monkeypatch.setenv(
+        "NOTIFICATION_TECHNICAL_RECIPIENT",
+        "technical@example.invalid",
+    )
+    get_settings.cache_clear()
+
+    def fail_send(
+        self: SMTPEmailSender,
+        recipient: str,
+        subject: str,
+        body: str,
+    ) -> None:
+        raise smtplib.SMTPException("simulated mail failure")
+
+    monkeypatch.setattr(SMTPEmailSender, "send", fail_send)
+    started = client.post("/api/experiments", json=START_CONFIRMATIONS).json()
+    session_id = started["session_id"]
+    endpoint = f"/api/experiments/{session_id}/responses"
+
+    for trial_number in range(1, 11):
+        state = client.get(f"/api/experiments/{session_id}").json()
+        response = client.post(
+            endpoint,
+            json={
+                "color_id": state["next_color"]["id"],
+                "emotion": "Freude",
+                "trial_number": trial_number,
+                "experiment_version": state["experiment_version"],
+            },
+        )
+        assert response.status_code == 200
+
+    assert client.get(f"/api/experiments/{session_id}").json()["status"] == "completed"
+    get_settings.cache_clear()
+
+
+def test_parallel_final_requests_notify_only_once(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("NOTIFICATION_ENABLED", "true")
+    monkeypatch.setenv("SMTP_HOST", "smtp.test.invalid")
+    monkeypatch.setenv("SMTP_FROM", "study@example.invalid")
+    monkeypatch.setenv("NOTIFICATION_OPERATOR_RECIPIENT", "operator@example.invalid")
+    monkeypatch.setenv(
+        "NOTIFICATION_TECHNICAL_RECIPIENT",
+        "technical@example.invalid",
+    )
+    get_settings.cache_clear()
+    messages: list[tuple[str, str, str]] = []
+
+    def capture(
+        self: SMTPEmailSender,
+        recipient: str,
+        subject: str,
+        body: str,
+    ) -> None:
+        messages.append((recipient, subject, body))
+
+    monkeypatch.setattr(SMTPEmailSender, "send", capture)
+    engine = create_engine(
+        f"sqlite:///{tmp_path / 'parallel-final.db'}",
+        connect_args={"check_same_thread": False},
+    )
+    Base.metadata.create_all(engine)
+    app = create_app()
+
+    def override_get_db():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as first_client, TestClient(app) as second_client:
+        started = first_client.post(
+            "/api/experiments",
+            json=START_CONFIRMATIONS,
+        ).json()
+        session_id = started["session_id"]
+        endpoint = f"/api/experiments/{session_id}/responses"
+        for trial_number in range(1, 10):
+            state = first_client.get(endpoint.removesuffix("/responses")).json()
+            response = first_client.post(
+                endpoint,
+                json={
+                    "color_id": state["next_color"]["id"],
+                    "emotion": "Freude",
+                    "trial_number": trial_number,
+                    "experiment_version": state["experiment_version"],
+                },
+            )
+            assert response.status_code == 200
+
+        state = first_client.get(endpoint.removesuffix("/responses")).json()
+        payload = {
+            "color_id": state["next_color"]["id"],
+            "emotion": "Freude",
+            "trial_number": 10,
+            "experiment_version": state["experiment_version"],
+        }
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(
+                executor.map(
+                    lambda client: client.post(endpoint, json=payload),
+                    (first_client, second_client),
+                )
+            )
+
+    assert sorted(result.status_code for result in results) == [200, 409]
+    assert len(messages) == 2
+    assert {message[0] for message in messages} == {
+        "operator@example.invalid",
+        "technical@example.invalid",
+    }
+    Base.metadata.drop_all(engine)
+    engine.dispose()
+    get_settings.cache_clear()
+
+
+def test_completed_session_does_not_send_when_notifications_are_disabled(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("NOTIFICATION_ENABLED", "false")
+    get_settings.cache_clear()
+
+    def fail_if_called(
+        self: SMTPEmailSender,
+        recipient: str,
+        subject: str,
+        body: str,
+    ) -> None:
+        raise AssertionError("SMTP sender must not be called when disabled.")
+
+    monkeypatch.setattr(SMTPEmailSender, "send", fail_if_called)
+    started = client.post("/api/experiments", json=START_CONFIRMATIONS).json()
+    session_id = started["session_id"]
+    endpoint = f"/api/experiments/{session_id}/responses"
+
+    for trial_number in range(1, 11):
+        state = client.get(f"/api/experiments/{session_id}").json()
+        response = client.post(
+            endpoint,
+            json={
+                "color_id": state["next_color"]["id"],
+                "emotion": "Freude",
+                "trial_number": trial_number,
+                "experiment_version": state["experiment_version"],
+            },
+        )
+        assert response.status_code == 200
+
+    assert client.get(f"/api/experiments/{session_id}").json()["status"] == "completed"
+    get_settings.cache_clear()
 
 
 def test_existing_fifteen_trial_session_resumes_and_completes_via_api(

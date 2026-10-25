@@ -34,6 +34,18 @@ zufällig erzeugten `ADMIN_API_TOKEN`, eine absolute `DATABASE_URL` und
 `APP_ENV=production`. Der Token darf nicht in Git, HTML, JavaScript oder URLs
 stehen.
 
+Für die optionale Abschlussbenachrichtigung sind zusätzlich
+`NOTIFICATION_ENABLED=true`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`,
+`NOTIFICATION_OPERATOR_RECIPIENT` und
+`NOTIFICATION_TECHNICAL_RECIPIENT` zu setzen. Je nach Mailserver werden
+außerdem `SMTP_USERNAME` und `SMTP_PASSWORD`, sowie genau eine passende
+Kombination aus `SMTP_USE_SSL` und `SMTP_STARTTLS` benötigt. Das
+Verbindungs-Timeout wird mit `SMTP_TIMEOUT` begrenzt. Die Zugangsdaten und
+Empfängeradressen dürfen ausschließlich in dieser geschützten Datei liegen.
+Die Benachrichtigung ist standardmäßig deaktiviert; bei unvollständiger
+Konfiguration bleibt die Studienfunktion aktiv und protokolliert den
+übersprungenen Versand.
+
 Die Anwendung lehnt in Produktion außerdem einen nichtlokalen `APP_HOST` und
 Admin-Tokens mit weniger als 32 Zeichen ab. Ein separates Secret-Management
 und eine dokumentierte Rotation bleiben erforderlich.

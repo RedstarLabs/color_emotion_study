@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from rgb_website.models import SessionColor, SurveySession
@@ -22,3 +22,13 @@ class SurveySessionRepository:
         self.db.add(color)
         self.db.flush()
         return color
+
+    def count_completed(self) -> int:
+        return (
+            self.db.scalar(
+                select(func.count(SurveySession.id)).where(
+                    SurveySession.status == "completed"
+                )
+            )
+            or 0
+        )

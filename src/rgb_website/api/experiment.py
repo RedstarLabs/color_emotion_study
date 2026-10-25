@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 from uuid import uuid4
 
@@ -5,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from rgb_website.config import get_settings
 from rgb_website.database.session import get_db
 from rgb_website.experiment import TRIAL_COUNT
 from rgb_website.schemas import (
@@ -14,10 +16,11 @@ from rgb_website.schemas import (
     SubmitResponseRequest,
     SubmitResponseResult,
 )
-from rgb_website.services import SurveyService
+from rgb_website.services import NotificationService, SurveyService
 
 router = APIRouter(prefix="/api/experiments", tags=["experiments"])
 DatabaseSession = Annotated[Session, Depends(get_db)]
+logger = logging.getLogger(__name__)
 
 
 def _state(service: SurveyService, session_id: str) -> ExperimentStateResponse:
@@ -94,7 +97,7 @@ def submit_response(
 ) -> SubmitResponseResult:
     service = SurveyService(db)
     try:
-        service.add_response(
+        response = service.add_response(
             session_id=session_id,
             color_id=payload.color_id,
             trial_number=payload.trial_number,
@@ -110,6 +113,14 @@ def submit_response(
             status_code=409,
             detail="Response conflicts with the current experiment state.",
         ) from error
+    if response.session is not None and response.session.status == "completed":
+        try:
+            NotificationService(
+                service.db,
+                get_settings(),
+            ).notify_completed_participation()
+        except ValueError:
+            logger.exception("Could not load completion notification configuration.")
     return SubmitResponseResult(**_state(service, session_id).model_dump())
 
 

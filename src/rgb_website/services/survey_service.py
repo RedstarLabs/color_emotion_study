@@ -108,6 +108,7 @@ class SurveyService:
             experiment_version=experiment_version,
             response_timestamp=datetime.now(UTC),
         )
+        response.session = session
         try:
             self.responses.add(response)
             if self.responses.count_for_session(session_id) == session.trial_count:

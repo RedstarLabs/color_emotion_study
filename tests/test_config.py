@@ -61,3 +61,19 @@ def test_production_rejects_unsupported_sqlite_url_variants() -> None:
                 database_url=database_url,
                 admin_api_token="x" * 32,
             )
+
+
+def test_notifications_are_disabled_and_unconfigured_by_default() -> None:
+    settings = Settings()
+
+    assert settings.notification_enabled is False
+    assert settings.smtp_host is None
+    assert settings.notification_operator_recipient is None
+    assert settings.notification_technical_recipient is None
+
+
+def test_smtp_ssl_and_starttls_cannot_be_enabled_together() -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="SSL and STARTTLS"):
+        Settings(smtp_use_ssl=True, smtp_starttls=True)

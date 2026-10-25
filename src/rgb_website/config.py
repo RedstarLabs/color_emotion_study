@@ -14,6 +14,23 @@ class Settings(BaseSettings):
         min_length=1,
     )
     admin_api_token: str | None = None
+    notification_enabled: bool = False
+    smtp_host: str | None = None
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    notification_operator_recipient: str | None = None
+    notification_technical_recipient: str | None = None
+    smtp_use_ssl: bool = False
+    smtp_starttls: bool = True
+    smtp_timeout: float = Field(default=10.0, gt=0, le=60)
+
+    @model_validator(mode="after")
+    def validate_smtp_security_modes(self) -> Settings:
+        if self.smtp_use_ssl and self.smtp_starttls:
+            raise ValueError("SMTP cannot use SSL and STARTTLS at the same time.")
+        return self
 
     @model_validator(mode="after")
     def validate_production_database_path(self) -> Settings:
