@@ -239,6 +239,44 @@ def test_notification_failure_does_not_fail_completed_response(
     get_settings.cache_clear()
 
 
+def test_unexpected_notification_failure_does_not_fail_saved_completion(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("NOTIFICATION_ENABLED", "true")
+    get_settings.cache_clear()
+
+    def fail_unexpectedly(self: object) -> None:
+        raise RuntimeError("unexpected notification failure")
+
+    monkeypatch.setattr(
+        "rgb_website.api.experiment.NotificationService.notify_completed_participation",
+        fail_unexpectedly,
+    )
+    started = client.post("/api/experiments", json=START_CONFIRMATIONS).json()
+    session_id = started["session_id"]
+    endpoint = f"/api/experiments/{session_id}/responses"
+
+    for trial_number in range(1, 11):
+        state = client.get(f"/api/experiments/{session_id}").json()
+        response = client.post(
+            endpoint,
+            json={
+                "color_id": state["next_color"]["id"],
+                "emotion": "Freude",
+                "trial_number": trial_number,
+                "experiment_version": state["experiment_version"],
+            },
+        )
+        assert response.status_code == 200
+
+    completed = client.get(f"/api/experiments/{session_id}")
+    assert completed.status_code == 200
+    assert completed.json()["status"] == "completed"
+    assert completed.json()["answered_count"] == 10
+    get_settings.cache_clear()
+
+
 def test_parallel_final_requests_notify_only_once(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,

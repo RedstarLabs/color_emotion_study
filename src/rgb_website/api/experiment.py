@@ -119,8 +119,12 @@ def submit_response(
                 service.db,
                 get_settings(),
             ).notify_completed_participation()
-        except ValueError:
-            logger.exception("Could not load completion notification configuration.")
+        except Exception as error:
+            logger.error(
+                "Completion notification failed after the participation was saved "
+                "(error_type=%s).",
+                type(error).__name__,
+            )
     return SubmitResponseResult(**_state(service, session_id).model_dump())
 
 

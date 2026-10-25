@@ -80,8 +80,17 @@ class NotificationService:
         for recipient in self._recipients():
             try:
                 self.sender.send(recipient, SUBJECT, body)
-            except (ValueError, OSError, smtplib.SMTPException):
-                logger.exception("Could not send completion notification.")
+            except (ValueError, OSError, smtplib.SMTPException) as error:
+                logger.error(
+                    "Could not send completion notification (error_type=%s).",
+                    type(error).__name__,
+                )
+            except Exception as error:
+                logger.error(
+                    "Unexpected completion notification failure "
+                    "(error_type=%s).",
+                    type(error).__name__,
+                )
 
     def _is_configured(self) -> bool:
         required = (
